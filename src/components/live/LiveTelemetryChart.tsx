@@ -49,6 +49,8 @@ export function LiveTelemetryChart({
     [drivers]
   );
 
+  const hasData = data.length > 0 && drivers.length > 0;
+
   const renderTooltip = ({
     active,
     payload,
@@ -124,8 +126,8 @@ export function LiveTelemetryChart({
   };
 
   return (
-    <div className="relative flex h-[320px] w-full flex-col overflow-hidden rounded-3xl border border-white/5 bg-black/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-      <div className="flex items-center justify-between px-5 py-4">
+    <div className="relative w-full overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/60 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+      <div className="flex items-center justify-between px-5 py-4 bg-zinc-900/40">
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-white/60">
             {title}
@@ -136,72 +138,92 @@ export function LiveTelemetryChart({
           {statusLabel ?? (isLoading ? "Refreshing…" : "Updated")}
         </span>
       </div>
-      <div className="relative flex-1">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={data}
-            onMouseMove={(state) => {
-              if (state && state.activeLabel)
-                setActiveLap(Number(state.activeLabel));
-            }}
-            onMouseLeave={() => setActiveLap(null)}
+      <div
+        className="relative w-full px-2 bg-zinc-950/50"
+        style={{ height: "320px" }}
+      >
+        {!hasData ? (
+          <div
+            className="flex items-center justify-center text-xs text-white/40"
+            style={{ height: "320px" }}
           >
-            <CartesianGrid
-              stroke="rgba(255,255,255,0.08)"
-              strokeDasharray="3 3"
-            />
-            <XAxis
-              dataKey="lap"
-              stroke="#e5e7eb"
-              tickLine={false}
-              axisLine={false}
-              fontSize={12}
-            />
-            <YAxis
-              stroke="#e5e7eb"
-              tickLine={false}
-              axisLine={false}
-              fontSize={12}
-              domain={[200, "auto"]}
-            />
-            <Tooltip
-              cursor={{ stroke: "rgba(148,163,184,0.4)", strokeWidth: 1 }}
-              content={renderTooltip}
-              wrapperStyle={{ outline: "none" }}
-            />
-            <Legend
-              formatter={(value, entry) => {
-                const payload = entry as { dataKey?: string };
-                const driver = drivers.find(
-                  (item) =>
-                    String(item.driver_number) === String(payload.dataKey ?? "")
-                );
-                return driver ? driver.name_acronym : value;
+            {drivers.length === 0
+              ? isLoading
+                ? "Loading drivers..."
+                : "Select drivers to view telemetry"
+              : "No telemetry data available yet"}
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart
+              data={data}
+              margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+              onMouseMove={(state) => {
+                if (state && state.activeLabel)
+                  setActiveLap(Number(state.activeLabel));
               }}
-              iconType="circle"
-              iconSize={8}
-              wrapperStyle={{
-                paddingTop: 12,
-                color: "rgba(255,255,255,0.65)",
-                fontSize: 12,
-              }}
-            />
-            {chartLines.map(({ driver, stroke }) => (
-              <Line
-                key={driver.driver_number}
-                type="monotone"
-                dataKey={String(driver.driver_number)}
-                name={driver.name_acronym}
-                stroke={stroke}
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-                connectNulls
-                activeDot={{ r: 4 }}
+              onMouseLeave={() => setActiveLap(null)}
+            >
+              <CartesianGrid
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 3"
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <XAxis
+                dataKey="lap"
+                stroke="#9ca3af"
+                tickLine={false}
+                axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                fontSize={12}
+                tick={{ fill: "#9ca3af" }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                tickLine={false}
+                axisLine={{ stroke: "rgba(255,255,255,0.2)" }}
+                fontSize={12}
+                domain={[200, "auto"]}
+                tick={{ fill: "#9ca3af" }}
+              />
+              <Tooltip
+                cursor={{ stroke: "rgba(148,163,184,0.4)", strokeWidth: 1 }}
+                content={renderTooltip}
+                wrapperStyle={{ outline: "none" }}
+              />
+              <Legend
+                formatter={(value, entry) => {
+                  const payload = entry as { dataKey?: string };
+                  const driver = drivers.find(
+                    (item) =>
+                      String(item.driver_number) ===
+                      String(payload.dataKey ?? "")
+                  );
+                  return driver ? driver.name_acronym : value;
+                }}
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{
+                  paddingTop: 12,
+                  color: "rgba(255,255,255,0.65)",
+                  fontSize: 12,
+                }}
+              />
+              {chartLines.map(({ driver, stroke }) => (
+                <Line
+                  key={driver.driver_number}
+                  type="monotone"
+                  dataKey={String(driver.driver_number)}
+                  name={driver.name_acronym}
+                  stroke={stroke}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                  connectNulls
+                  activeDot={{ r: 4 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
       <div className="flex items-center justify-between border-t border-white/5 px-5 py-3 text-[11px] text-white/50">
         <span>

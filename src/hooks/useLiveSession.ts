@@ -12,7 +12,6 @@ function hasSessionStarted(session?: Session | null) {
   const now = Date.now();
   return now >= start;
 }
-
 export function useLatestRaceSession() {
   const latestQuery = useQuery<Session | null, Error>({
     queryKey: ["openf1", "session", "latest"],
@@ -45,7 +44,6 @@ export function useLatestRaceSession() {
         : fallbackQuery.data ?? latestQuery.data ?? null,
     [fallbackQuery.data, latestQuery.data]
   );
-
   const isFallback =
     !hasSessionStarted(latestQuery.data) && Boolean(fallbackQuery.data);
 

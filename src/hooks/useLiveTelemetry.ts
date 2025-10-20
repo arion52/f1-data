@@ -114,7 +114,7 @@ export function useLiveTelemetry(
   const driverKey =
     drivers?.map((driver) => driver.driver_number).join("-") ?? "all";
 
-  const { refetchInterval = 7_000 } = options ?? {};
+  const { refetchInterval = 15_000 } = options ?? {}; // Changed from 7s to 15s
 
   const query = useQuery({
     queryKey: ["openf1", "telemetry", sessionKey, driverKey],
@@ -126,6 +126,8 @@ export function useLiveTelemetry(
     },
     enabled: Boolean(sessionKey && drivers && drivers.length > 0),
     refetchInterval,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   const chartData = useMemo(() => {

@@ -1,6 +1,6 @@
 <h1 align="center">🏁 Apex F1 Live</h1>
 
-A production-ready Formula 1 telemetry dashboard built with **Next.js 15**, **React Query**, **Recharts**, and the **OpenF1 API**. Track live race pace, monitor tyre strategy, and deep-dive into historical telemetry with a modern, responsive dark UI that’s ready for Vercel deployment.
+A production-ready Formula 1 telemetry dashboard built with **Next.js 15**, **React Query**, **Recharts**, and the **OpenF1 API**. Track live race pace, monitor tyre strategy, and deep-dive into historical telemetry with a modern, responsive dark UI.
 
 ## ✨ Features
 
@@ -19,12 +19,6 @@ npm run dev
 ```
 
 Then open [http://localhost:3000](http://localhost:3000) to access the dashboard. You’ll be redirected to `/live`; the archive view is available at `/archive`.
-
-### Environment variables
-
-| Variable                      | Description                                                   | Default                               |
-| ----------------------------- | ------------------------------------------------------------- | ------------------------------------- |
-| `NEXT_PUBLIC_FASTF1_BASE_URL` | Optional FastF1-compatible fallback proxy for OpenF1 outages. | `https://fastf1-openf1-proxy.fly.dev` |
 
 ## 🧪 Testing
 

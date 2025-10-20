@@ -1,44 +1,69 @@
 const OPENF1_BASE_URL = "https://api.openf1.org/v1";
 
-const FASTF1_FALLBACK_URL =
-  process.env.NEXT_PUBLIC_FASTF1_BASE_URL ??
-  "https://fastf1-openf1-proxy.fly.dev";
+const FASTF1_FALLBACK_URL = process.env.NEXT_PUBLIC_FASTF1_BASE_URL ?? "";
 
 export type Primitive = string | number | boolean | undefined | null;
 export type QueryParams = Record<string, Primitive | Primitive[]>;
 
+// Helper to add delay between requests
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function fetchWithFallback<T>(
   path: string,
-  params?: QueryParams
+  params?: QueryParams,
+  retryCount = 0
 ): Promise<T> {
   const url = buildUrl(OPENF1_BASE_URL, path, params);
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-    },
-    next: { revalidate: 0 },
-  });
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+      },
+      next: { revalidate: 0 },
+    });
 
-  if (response.ok) {
-    return response.json();
+    if (response.ok) {
+      return response.json();
+    }
+
+    // If rate limited, wait and retry
+    if (response.status === 429 && retryCount < 3) {
+      const waitTime = Math.pow(2, retryCount) * 1000; // Exponential backoff
+      console.log(
+        `⏳ Rate limited, waiting ${waitTime}ms before retry ${
+          retryCount + 1
+        }/3`
+      );
+      await delay(waitTime);
+      return fetchWithFallback<T>(path, params, retryCount + 1);
+    }
+
+    // Only try fallback if it's configured
+    if (FASTF1_FALLBACK_URL) {
+      console.log("🔄 Trying fallback proxy...");
+      const fallbackUrl = buildUrl(FASTF1_FALLBACK_URL, path, params);
+      const fallbackResponse = await fetch(fallbackUrl, {
+        headers: {
+          Accept: "application/json",
+        },
+        next: { revalidate: 0 },
+      });
+
+      if (!fallbackResponse.ok) {
+        throw new Error(
+          `OpenF1 request failed: ${response.status} / fallback ${fallbackResponse.status}`
+        );
+      }
+
+      return fallbackResponse.json();
+    }
+
+    throw new Error(`OpenF1 request failed: ${response.status}`);
+  } catch (error) {
+    console.error("❌ Fetch error:", error);
+    throw error;
   }
-
-  const fallbackUrl = buildUrl(FASTF1_FALLBACK_URL, path, params);
-  const fallbackResponse = await fetch(fallbackUrl, {
-    headers: {
-      Accept: "application/json",
-    },
-    next: { revalidate: 0 },
-  });
-
-  if (!fallbackResponse.ok) {
-    throw new Error(
-      `OpenF1 request failed: ${response.status} / fallback ${fallbackResponse.status}`
-    );
-  }
-
-  return fallbackResponse.json();
 }
 
 function buildUrl(base: string, path: string, params?: QueryParams) {
@@ -200,24 +225,29 @@ export const openf1Client = {
     driverNumbers?: number[],
     limit = 60
   ): Promise<LapData[]> {
-    if (!driverNumbers || driverNumbers.length === 0) {
-      return fetchWithFallback<LapData[]>("laps", {
+    try {
+      // Fetch ALL laps for the session (no lap_number filter as API doesn't support <=)
+      const allLaps = await fetchWithFallback<LapData[]>("laps", {
         session_key: sessionKey,
-        "lap_number<=": limit,
       });
+
+      // Filter by driver numbers if specified
+      let filtered = allLaps;
+
+      if (driverNumbers && driverNumbers.length > 0) {
+        filtered = filtered.filter((lap) =>
+          driverNumbers.includes(lap.driver_number)
+        );
+      }
+
+      // Apply lap number limit client-side
+      filtered = filtered.filter((lap) => lap.lap_number <= limit);
+
+      return filtered;
+    } catch (error) {
+      console.error("❌ Failed to fetch laps:", error);
+      return [];
     }
-
-    const results = await Promise.all(
-      driverNumbers.map((driver) =>
-        fetchWithFallback<LapData[]>("laps", {
-          session_key: sessionKey,
-          driver_number: driver,
-          "lap_number<=": limit,
-        })
-      )
-    );
-
-    return results.flat();
   },
 
   async getIntervals(sessionKey: number): Promise<IntervalData[]> {

@@ -8,6 +8,7 @@ import { ReactNode } from "react";
 
 const NAV_ITEMS = [
   { href: "/live", label: "🏁 Live" },
+  { href: "/stats", label: "📊 Stats" },
   { href: "/archive", label: "📅 Archive" },
   { href: "/settings", label: "⚙️ Settings", disabled: true },
 ];
